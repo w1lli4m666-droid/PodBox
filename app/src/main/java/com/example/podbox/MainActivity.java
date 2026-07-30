@@ -107,6 +107,7 @@ public final class MainActivity extends Activity {
     private String currentPlaybackGuid = "";
     private boolean currentPlaybackPlaying;
     private final List<EpisodePlayControl> episodePlayControls = new ArrayList<EpisodePlayControl>();
+    private final List<QueueRowControl> queueRowControls = new ArrayList<QueueRowControl>();
 
     private final BroadcastReceiver playbackReceiver = new BroadcastReceiver() {
         @Override
@@ -131,6 +132,12 @@ public final class MainActivity extends Activity {
             queueArtworks = nonNull(intent.getStringArrayExtra(PlaybackService.EXTRA_QUEUE_ARTWORKS));
             queueIndex = intent.getIntExtra(PlaybackService.EXTRA_QUEUE_INDEX, -1);
             repeatMode = intent.getIntExtra(PlaybackService.EXTRA_REPEAT_MODE, 0);
+            if (queuePopup != null && queuePopup.isShowing()) {
+                if (queueRepeatButton != null) {
+                    queueRepeatButton.setImageResource(repeatIcon());
+                }
+                updateQueueRowsInPlace();
+            }
             boolean supported = intent.getBooleanExtra(
                     PlaybackService.EXTRA_SPEED_SUPPORTED, Build.VERSION.SDK_INT >= 23);
             playerSpeedUp.setEnabled(supported);
@@ -495,6 +502,27 @@ public final class MainActivity extends Activity {
         EpisodePlayControl(String guid, ImageButton button) {
             this.guid = guid == null ? "" : guid;
             this.button = button;
+        }
+    }
+
+    private static final class QueueRowControl {
+        final LinearLayout row;
+        final ImageView artwork;
+        final TextView title;
+        final ImageButton play;
+        final ImageButton up;
+        final ImageButton down;
+        final ImageButton remove;
+
+        QueueRowControl(LinearLayout row, ImageView artwork, TextView title,
+                        ImageButton play, ImageButton up, ImageButton down, ImageButton remove) {
+            this.row = row;
+            this.artwork = artwork;
+            this.title = title;
+            this.play = play;
+            this.up = up;
+            this.down = down;
+            this.remove = remove;
         }
     }
 
@@ -939,17 +967,31 @@ public final class MainActivity extends Activity {
 
     private void toggleQueuePopup() {
         if (queuePopup != null && queuePopup.isShowing()) {
-            queuePopup.dismiss();
-            playerQueue.requestFocus();
+            closeQueuePopup(true);
             return;
         }
         showQueuePopup();
+    }
+
+    private void closeQueuePopup(boolean focusPlayerQueue) {
+        if (queuePopup != null) {
+            queuePopup.dismiss();
+        }
+        queuePopup = null;
+        queueRows = null;
+        queueRepeatButton = null;
+        queueRowControls.clear();
+        playerQueue.setBackgroundResource(R.drawable.focusable_button);
+        if (focusPlayerQueue) {
+            playerQueue.requestFocus();
+        }
     }
 
     private void showQueuePopup() {
         if (queuePopup != null) {
             queuePopup.dismiss();
         }
+        playerQueue.setBackgroundResource(R.drawable.queue_open_button);
         LinearLayout root = verticalList();
         root.setBackgroundColor(0xff1c2027);
         LinearLayout header = row();
@@ -960,8 +1002,7 @@ public final class MainActivity extends Activity {
         collapse.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                queuePopup.dismiss();
-                playerQueue.requestFocus();
+                closeQueuePopup(true);
             }
         });
         header.addView(collapse);
@@ -984,7 +1025,7 @@ public final class MainActivity extends Activity {
                 queueArtworks = new String[0];
                 queueIndex = -1;
                 currentPlaybackPlaying = false;
-                renderQueueRows(-1, 0);
+                updateQueueRowsInPlace();
                 queueAction(PlaybackService.ACTION_QUEUE_CLEAR, -1, 0);
                 view.requestFocus();
             }
@@ -1002,6 +1043,12 @@ public final class MainActivity extends Activity {
         queuePopup = new PopupWindow(scroll, ViewGroup.LayoutParams.MATCH_PARENT, dp(280), true);
         queuePopup.setBackgroundDrawable(new ColorDrawable(0xff1c2027));
         queuePopup.setOutsideTouchable(true);
+        queuePopup.setOnDismissListener(new PopupWindow.OnDismissListener() {
+            @Override
+            public void onDismiss() {
+                playerQueue.setBackgroundResource(R.drawable.focusable_button);
+            }
+        });
         queuePopup.showAsDropDown(miniPlayer, 0, -dp(338));
         collapse.post(new Runnable() {
             @Override
@@ -1016,6 +1063,7 @@ public final class MainActivity extends Activity {
             return;
         }
         queueRows.removeAllViews();
+        queueRowControls.clear();
         if (queueTitles.length == 0) {
             queueRows.addView(message("当前播放列表为空"));
             return;
@@ -1027,7 +1075,8 @@ public final class MainActivity extends Activity {
 
     private void addQueueRow(LinearLayout root, final int index, final int focusIndex, final int focusKind) {
         LinearLayout row = row();
-        row.addView(cover(index < queueArtworks.length ? queueArtworks[index] : "", 42));
+        ImageView artwork = cover(index < queueArtworks.length ? queueArtworks[index] : "", 42);
+        row.addView(artwork);
         TextView title = text((index == queueIndex ? "▶ " : "") + queueTitles[index], 1);
         title.setMaxLines(2);
         title.setOnClickListener(new View.OnClickListener() {
@@ -1046,7 +1095,7 @@ public final class MainActivity extends Activity {
                 if (index == queueIndex) {
                     currentPlaybackPlaying = !currentPlaybackPlaying;
                     queueAction(PlaybackService.ACTION_TOGGLE, index, 0);
-                    renderQueueRows(index, 1);
+                    updateQueueRowsInPlace();
                 } else {
                     playQueueIndex(index);
                 }
@@ -1084,6 +1133,7 @@ public final class MainActivity extends Activity {
         });
         row.addView(remove);
         root.addView(row);
+        queueRowControls.add(new QueueRowControl(row, artwork, title, play, up, down, remove));
 
         if (index == focusIndex) {
             final View focus = focusKind == 1 ? play : (focusKind == 2 ? up : (focusKind == 3 ? down : remove));
@@ -1100,7 +1150,7 @@ public final class MainActivity extends Activity {
         queueIndex = index;
         currentPlaybackPlaying = true;
         queueAction(PlaybackService.ACTION_PLAY_INDEX, index, 0);
-        renderQueueRows(index, 1);
+        updateQueueRowsInPlace();
     }
 
     private void moveQueueUi(int index, int delta) {
@@ -1116,7 +1166,7 @@ public final class MainActivity extends Activity {
         } else if (queueIndex == target) {
             queueIndex = index;
         }
-        renderQueueRows(target, delta < 0 ? 2 : 3);
+        updateQueueRowsInPlace();
     }
 
     private void removeQueueUi(int index) {
@@ -1132,7 +1182,76 @@ public final class MainActivity extends Activity {
         } else if (queueIndex > index) {
             queueIndex--;
         }
-        renderQueueRows(Math.min(index, queueTitles.length - 1), 4);
+        updateQueueRowsInPlace();
+    }
+
+    private void updateQueueRowsInPlace() {
+        if (queueRows == null || queueRowControls.isEmpty()) {
+            return;
+        }
+        for (int i = 0; i < queueRowControls.size(); i++) {
+            QueueRowControl control = queueRowControls.get(i);
+            if (i < queueTitles.length) {
+                installQueueRowListeners(control, i);
+                control.title.setText((i == queueIndex ? "▶ " : "") + queueTitles[i]);
+                control.play.setImageResource(queuePlayIcon(i));
+                control.play.setEnabled(true);
+                control.up.setEnabled(i > 0);
+                control.down.setEnabled(i < queueTitles.length - 1);
+                control.remove.setEnabled(true);
+                ImageLoader.load(control.artwork, i < queueArtworks.length ? queueArtworks[i] : "", dp(42));
+            } else {
+                control.title.setText(i == 0 ? "当前播放列表为空" : "已移除");
+                control.play.setImageResource(R.drawable.ic_play);
+                control.play.setEnabled(false);
+                control.up.setEnabled(false);
+                control.down.setEnabled(false);
+                control.remove.setEnabled(false);
+                control.artwork.setImageResource(R.drawable.ic_cover_default);
+            }
+        }
+    }
+
+    private void installQueueRowListeners(final QueueRowControl control, final int index) {
+        control.title.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                playQueueIndex(index);
+            }
+        });
+        control.play.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                if (index == queueIndex) {
+                    currentPlaybackPlaying = !currentPlaybackPlaying;
+                    queueAction(PlaybackService.ACTION_TOGGLE, index, 0);
+                    updateQueueRowsInPlace();
+                } else {
+                    playQueueIndex(index);
+                }
+            }
+        });
+        control.up.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                moveQueueUi(index, -1);
+                queueAction(PlaybackService.ACTION_QUEUE_MOVE, index, -1);
+            }
+        });
+        control.down.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                moveQueueUi(index, 1);
+                queueAction(PlaybackService.ACTION_QUEUE_MOVE, index, 1);
+            }
+        });
+        control.remove.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                removeQueueUi(index);
+                queueAction(PlaybackService.ACTION_QUEUE_REMOVE, index, 0);
+            }
+        });
     }
 
     private void cycleRepeatModeUi() {
@@ -1389,7 +1508,7 @@ public final class MainActivity extends Activity {
     @Override
     public void onBackPressed() {
         if (queuePopup != null && queuePopup.isShowing()) {
-            queuePopup.dismiss();
+            closeQueuePopup(false);
             return;
         }
         if (subscriptionDetailVisible) {
