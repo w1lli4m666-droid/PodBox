@@ -1,0 +1,11 @@
+<resources>
+    <string name="app_name">播客盒子</string>
+    <string name="subscriptions">订阅</string>
+    <string name="recent">最近更新</string>
+    <string name="search">搜索</string>
+    <string name="refresh">刷新</string>
+    <string name="clear_cache">清理缓存</string>
+    <string name="search_hint">输入拼音、中文或英文</string>
+    <string name="empty_subscriptions">还没有订阅。请先搜索并订阅播客。</string>
+    <string name="empty_recent">暂无节目，请刷新订阅。</string>
+</resources>

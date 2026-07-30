@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/background"
+    android:orientation="vertical"
+    android:padding="12dp">
+    <HorizontalScrollView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:fillViewport="true"
+        android:scrollbars="none">
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+            <Button android:id="@+id/tab_subscriptions" style="@style/PodButton" android:text="@string/subscriptions" />
+            <Button android:id="@+id/tab_recent" style="@style/PodButton" android:text="@string/recent" />
+            <Button android:id="@+id/tab_search" style="@style/PodButton" android:text="@string/search" />
+            <Button android:id="@+id/action_clear_cache" style="@style/PodButton" android:text="@string/clear_cache" />
+        </LinearLayout>
+    </HorizontalScrollView>
+    <FrameLayout
+        android:id="@+id/content"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginTop="10dp"
+        android:layout_weight="1" />
+    <HorizontalScrollView
+        android:id="@+id/mini_player"
+        android:layout_width="match_parent"
+        android:layout_height="54dp"
+        android:background="@color/panel"
+        android:fillViewport="true"
+        android:scrollbars="none"
+        android:visibility="gone">
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="54dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:padding="3dp">
+        <ImageView
+            android:id="@+id/player_artwork"
+            android:layout_width="42dp"
+            android:layout_height="42dp"
+            android:layout_marginRight="3dp"
+            android:background="@drawable/ic_cover_default"
+            android:scaleType="centerCrop" />
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:gravity="center_vertical"
+            android:orientation="vertical"
+            android:paddingLeft="4dp"
+            android:paddingRight="4dp">
+            <TextView
+                android:id="@+id/player_title"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:textColor="@color/text_primary"
+                android:textSize="14sp" />
+            <TextView
+                android:id="@+id/player_time"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="00:00 / 00:00"
+                android:textColor="@color/text_secondary"
+                android:textSize="12sp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="42dp"
+            android:layout_marginLeft="2dp"
+            android:background="@drawable/control_group_border"
+            android:gravity="center"
+            android:orientation="horizontal"
+            android:padding="2dp">
+            <ImageButton
+                android:id="@+id/player_queue"
+                style="@style/PlayerIconButton"
+                android:contentDescription="播放列表"
+                android:src="@drawable/ic_queue" />
+            <ImageButton
+                android:id="@+id/player_back"
+                style="@style/PlayerIconButton"
+                android:contentDescription="快退15秒"
+                android:src="@drawable/ic_replay_15" />
+            <ImageButton
+                android:id="@+id/player_forward"
+                style="@style/PlayerIconButton"
+                android:contentDescription="快进15秒"
+                android:src="@drawable/ic_forward_15" />
+        </LinearLayout>
+
+        <ImageButton
+            android:id="@+id/player_toggle"
+            style="@style/PlayerIconButton"
+            android:layout_width="42dp"
+            android:contentDescription="播放"
+            android:src="@drawable/ic_play" />
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="42dp"
+            android:layout_marginLeft="2dp"
+            android:background="@drawable/control_group_border"
+            android:gravity="center"
+            android:orientation="horizontal"
+            android:padding="2dp">
+            <Button
+                android:id="@+id/player_speed_up"
+                style="@style/PlayerButton"
+                android:layout_width="38dp"
+                android:text="+0.1" />
+            <Button
+                android:id="@+id/player_speed"
+                style="@style/PlayerValue"
+                android:text="1.0×" />
+            <Button
+                android:id="@+id/player_speed_down"
+                style="@style/PlayerButton"
+                android:layout_width="38dp"
+                android:text="-0.1" />
+        </LinearLayout>
+    </LinearLayout>
+    </HorizontalScrollView>
+</LinearLayout>

@@ -1,0 +1,5 @@
+Podcast application icon
+Source: Google Material Design Icons / Material Symbols, "Podcasts"
+License: Apache License 2.0
+https://github.com/google/material-design-icons
+https://www.apache.org/licenses/LICENSE-2.0
