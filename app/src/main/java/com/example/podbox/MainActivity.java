@@ -97,6 +97,8 @@ public final class MainActivity extends Activity {
     private boolean subscriptionDetailVisible;
     private int currentPage = PAGE_NONE;
     private PopupWindow queuePopup;
+    private LinearLayout queueRows;
+    private ImageButton queueRepeatButton;
     private String[] queueTitles = new String[0];
     private String[] queueGuids = new String[0];
     private String[] queueArtworks = new String[0];
@@ -964,9 +966,11 @@ public final class MainActivity extends Activity {
         });
         header.addView(collapse);
         ImageButton repeat = iconButton(repeatIcon(), "播放顺序");
+        queueRepeatButton = repeat;
         repeat.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                cycleRepeatModeUi();
                 queueAction(PlaybackService.ACTION_REPEAT_MODE, -1, 0);
             }
         });
@@ -975,19 +979,23 @@ public final class MainActivity extends Activity {
         clear.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                queueTitles = new String[0];
+                queueGuids = new String[0];
+                queueArtworks = new String[0];
+                queueIndex = -1;
+                currentPlaybackPlaying = false;
+                renderQueueRows(-1, 0);
                 queueAction(PlaybackService.ACTION_QUEUE_CLEAR, -1, 0);
+                view.requestFocus();
             }
         });
         header.addView(clear);
         root.addView(header);
 
-        if (queueTitles.length == 0) {
-            root.addView(message("当前播放列表为空"));
-        } else {
-            for (int i = 0; i < queueTitles.length; i++) {
-                addQueueRow(root, i);
-            }
-        }
+        queueRows = new LinearLayout(this);
+        queueRows.setOrientation(LinearLayout.VERTICAL);
+        root.addView(queueRows);
+        renderQueueRows(-1, 0);
 
         ScrollView scroll = new ScrollView(this);
         scroll.addView(root);
@@ -1003,36 +1011,54 @@ public final class MainActivity extends Activity {
         });
     }
 
-    private void addQueueRow(LinearLayout root, final int index) {
+    private void renderQueueRows(int focusIndex, int focusKind) {
+        if (queueRows == null) {
+            return;
+        }
+        queueRows.removeAllViews();
+        if (queueTitles.length == 0) {
+            queueRows.addView(message("当前播放列表为空"));
+            return;
+        }
+        for (int i = 0; i < queueTitles.length; i++) {
+            addQueueRow(queueRows, i, focusIndex, focusKind);
+        }
+    }
+
+    private void addQueueRow(LinearLayout root, final int index, final int focusIndex, final int focusKind) {
         LinearLayout row = row();
         row.addView(cover(index < queueArtworks.length ? queueArtworks[index] : "", 42));
-        ImageButton play = iconButton(queuePlayIcon(index), "播放");
-        play.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                if (index == queueIndex) {
-                    queueAction(PlaybackService.ACTION_TOGGLE, index, 0);
-                } else {
-                    queueAction(PlaybackService.ACTION_PLAY_INDEX, index, 0);
-                }
-            }
-        });
-        row.addView(play);
         TextView title = text((index == queueIndex ? "▶ " : "") + queueTitles[index], 1);
         title.setMaxLines(2);
         title.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                queueAction(PlaybackService.ACTION_PLAY_INDEX, index, 0);
+                playQueueIndex(index);
             }
         });
         title.setFocusable(true);
         row.addView(title);
 
+        ImageButton play = iconButton(queuePlayIcon(index), "播放");
+        play.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                if (index == queueIndex) {
+                    currentPlaybackPlaying = !currentPlaybackPlaying;
+                    queueAction(PlaybackService.ACTION_TOGGLE, index, 0);
+                    renderQueueRows(index, 1);
+                } else {
+                    playQueueIndex(index);
+                }
+            }
+        });
+        row.addView(play);
+
         ImageButton up = iconButton(R.drawable.ic_up, "上移");
         up.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                moveQueueUi(index, -1);
                 queueAction(PlaybackService.ACTION_QUEUE_MOVE, index, -1);
             }
         });
@@ -1042,6 +1068,7 @@ public final class MainActivity extends Activity {
         down.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                moveQueueUi(index, 1);
                 queueAction(PlaybackService.ACTION_QUEUE_MOVE, index, 1);
             }
         });
@@ -1051,11 +1078,97 @@ public final class MainActivity extends Activity {
         remove.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                removeQueueUi(index);
                 queueAction(PlaybackService.ACTION_QUEUE_REMOVE, index, 0);
             }
         });
         row.addView(remove);
         root.addView(row);
+
+        if (index == focusIndex) {
+            final View focus = focusKind == 1 ? play : (focusKind == 2 ? up : (focusKind == 3 ? down : remove));
+            focus.post(new Runnable() {
+                @Override
+                public void run() {
+                    focus.requestFocus();
+                }
+            });
+        }
+    }
+
+    private void playQueueIndex(int index) {
+        queueIndex = index;
+        currentPlaybackPlaying = true;
+        queueAction(PlaybackService.ACTION_PLAY_INDEX, index, 0);
+        renderQueueRows(index, 1);
+    }
+
+    private void moveQueueUi(int index, int delta) {
+        int target = index + delta;
+        if (index < 0 || target < 0 || index >= queueTitles.length || target >= queueTitles.length) {
+            return;
+        }
+        swap(queueTitles, index, target);
+        swap(queueGuids, index, target);
+        swap(queueArtworks, index, target);
+        if (queueIndex == index) {
+            queueIndex = target;
+        } else if (queueIndex == target) {
+            queueIndex = index;
+        }
+        renderQueueRows(target, delta < 0 ? 2 : 3);
+    }
+
+    private void removeQueueUi(int index) {
+        if (index < 0 || index >= queueTitles.length) {
+            return;
+        }
+        queueTitles = removeAt(queueTitles, index);
+        queueGuids = removeAt(queueGuids, index);
+        queueArtworks = removeAt(queueArtworks, index);
+        if (queueIndex == index) {
+            queueIndex = -1;
+            currentPlaybackPlaying = false;
+        } else if (queueIndex > index) {
+            queueIndex--;
+        }
+        renderQueueRows(Math.min(index, queueTitles.length - 1), 4);
+    }
+
+    private void cycleRepeatModeUi() {
+        if (repeatMode == 0) {
+            repeatMode = 2;
+        } else if (repeatMode == 2) {
+            repeatMode = 1;
+        } else {
+            repeatMode = 0;
+        }
+        if (queueRepeatButton != null) {
+            queueRepeatButton.setImageResource(repeatIcon());
+            queueRepeatButton.requestFocus();
+        }
+    }
+
+    private void swap(String[] values, int first, int second) {
+        if (first >= values.length || second >= values.length) {
+            return;
+        }
+        String temp = values[first];
+        values[first] = values[second];
+        values[second] = temp;
+    }
+
+    private String[] removeAt(String[] values, int index) {
+        if (index < 0 || index >= values.length) {
+            return values;
+        }
+        String[] result = new String[values.length - 1];
+        for (int i = 0, out = 0; i < values.length; i++) {
+            if (i != index) {
+                result[out++] = values[i];
+            }
+        }
+        return result;
     }
 
     private int queuePlayIcon(int index) {
@@ -1081,16 +1194,6 @@ public final class MainActivity extends Activity {
         intent.putExtra(PlaybackService.EXTRA_INDEX, index);
         intent.putExtra(PlaybackService.EXTRA_DELTA, delta);
         startService(intent);
-        if (queuePopup != null && queuePopup.isShowing()) {
-            new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
-                @Override
-                public void run() {
-                    if (queuePopup != null && queuePopup.isShowing()) {
-                        showQueuePopup();
-                    }
-                }
-            }, 250);
-        }
     }
 
     private String[] nonNull(String[] value) {
