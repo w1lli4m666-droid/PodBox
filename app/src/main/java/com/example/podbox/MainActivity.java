@@ -85,11 +85,11 @@ public final class MainActivity extends Activity {
     private Button tabRecent;
     private Button tabSubscriptions;
     private Button tabSearch;
-    private Button firstEpisodeButton;
-    private Button firstContentButton;
-    private Button firstQueueButton;
-    private Button previousEpisodeButton;
-    private Button previousQueueButton;
+    private View firstEpisodeButton;
+    private View firstContentButton;
+    private View firstQueueButton;
+    private View previousEpisodeButton;
+    private View previousQueueButton;
     private float pullStartY;
     private boolean loading;
     private boolean speedWarningShown;
@@ -98,15 +98,21 @@ public final class MainActivity extends Activity {
     private int currentPage = PAGE_NONE;
     private PopupWindow queuePopup;
     private String[] queueTitles = new String[0];
+    private String[] queueGuids = new String[0];
     private String[] queueArtworks = new String[0];
     private int queueIndex = -1;
     private int repeatMode;
+    private String currentPlaybackGuid = "";
+    private boolean currentPlaybackPlaying;
+    private final List<EpisodePlayControl> episodePlayControls = new ArrayList<EpisodePlayControl>();
 
     private final BroadcastReceiver playbackReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             String title = intent.getStringExtra(PlaybackService.EXTRA_TITLE);
             boolean playing = intent.getBooleanExtra(PlaybackService.EXTRA_PLAYING, false);
+            currentPlaybackGuid = value(intent.getStringExtra(PlaybackService.EXTRA_GUID));
+            currentPlaybackPlaying = playing;
             miniPlayer.setVisibility(View.VISIBLE);
             playerTitle.setText(title);
             playerTime.setText(formatDuration(
@@ -119,6 +125,7 @@ public final class MainActivity extends Activity {
             float speed = intent.getFloatExtra(PlaybackService.EXTRA_SPEED, 1.0f);
             playerSpeed.setText(formatSpeed(speed));
             queueTitles = nonNull(intent.getStringArrayExtra(PlaybackService.EXTRA_QUEUE_TITLES));
+            queueGuids = nonNull(intent.getStringArrayExtra(PlaybackService.EXTRA_QUEUE_GUIDS));
             queueArtworks = nonNull(intent.getStringArrayExtra(PlaybackService.EXTRA_QUEUE_ARTWORKS));
             queueIndex = intent.getIntExtra(PlaybackService.EXTRA_QUEUE_INDEX, -1);
             repeatMode = intent.getIntExtra(PlaybackService.EXTRA_REPEAT_MODE, 0);
@@ -131,6 +138,7 @@ public final class MainActivity extends Activity {
                 Toast.makeText(MainActivity.this,
                         "此设备的系统播放器不支持可靠倍速", Toast.LENGTH_SHORT).show();
             }
+            updateEpisodePlayButtons();
         }
     };
 
@@ -281,7 +289,7 @@ public final class MainActivity extends Activity {
         if (episodes.isEmpty()) {
             list.addView(message(getString(R.string.empty_recent)));
         } else {
-            Button playAll = button("全部播放");
+            ImageButton playAll = iconButton(R.drawable.ic_play, "全部播放");
             playAll.setId(generateViewIdCompat());
             playAll.setOnClickListener(new View.OnClickListener() {
                 @Override
@@ -314,7 +322,7 @@ public final class MainActivity extends Activity {
                 episodes.add(episode);
             }
         }
-        Button playAll = button("全部播放");
+        ImageButton playAll = iconButton(R.drawable.ic_play, "全部播放");
         playAll.setId(generateViewIdCompat());
         playAll.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -347,7 +355,7 @@ public final class MainActivity extends Activity {
         }
         row.addView(label);
 
-        Button playNext = button("下一个播放");
+        ImageButton playNext = iconButton(R.drawable.ic_play_next, "下一个播放");
         playNext.setId(generateViewIdCompat());
         playNext.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -360,15 +368,20 @@ public final class MainActivity extends Activity {
         });
         row.addView(playNext);
 
-        Button play = button(episode.playbackPositionMs > 0 && !episode.played ? "继续" : "播放");
+        final ImageButton play = iconButton(playIconFor(episode.guid), "播放");
         play.setId(generateViewIdCompat());
         play.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                startService(episodeIntent(episode, PlaybackService.ACTION_PLAY));
+                if (isCurrentEpisode(episode.guid)) {
+                    startService(playbackIntent(PlaybackService.ACTION_TOGGLE));
+                } else {
+                    startService(episodeIntent(episode, PlaybackService.ACTION_PLAY));
+                }
             }
         });
         row.addView(play);
+        episodePlayControls.add(new EpisodePlayControl(episode.guid, play));
         linkEpisodeFocusRow(playNext, play);
         list.addView(row);
     }
@@ -415,9 +428,10 @@ public final class MainActivity extends Activity {
         firstQueueButton = null;
         previousEpisodeButton = null;
         previousQueueButton = null;
+        episodePlayControls.clear();
     }
 
-    private void linkEpisodeFocusRow(Button queue, Button play) {
+    private void linkEpisodeFocusRow(View queue, View play) {
         queue.setNextFocusLeftId(queue.getId());
         queue.setNextFocusRightId(play.getId());
         play.setNextFocusLeftId(queue.getId());
@@ -445,6 +459,41 @@ public final class MainActivity extends Activity {
         }
         previousQueueButton = queue;
         previousEpisodeButton = play;
+    }
+
+    private int playIconFor(String guid) {
+        return isCurrentEpisode(guid) && currentPlaybackPlaying ? R.drawable.ic_pause : R.drawable.ic_play;
+    }
+
+    private boolean isCurrentEpisode(String guid) {
+        return currentPlaybackGuid.length() > 0 && currentPlaybackGuid.equals(value(guid));
+    }
+
+    private void updateEpisodePlayButtons() {
+        for (EpisodePlayControl control : episodePlayControls) {
+            control.button.setImageResource(playIconFor(control.guid));
+            control.button.setContentDescription(isCurrentEpisode(control.guid) && currentPlaybackPlaying ? "暂停" : "播放");
+        }
+    }
+
+    private Intent playbackIntent(String action) {
+        Intent intent = new Intent(this, PlaybackService.class);
+        intent.setAction(action);
+        return intent;
+    }
+
+    private String value(String value) {
+        return value == null ? "" : value;
+    }
+
+    private static final class EpisodePlayControl {
+        final String guid;
+        final ImageButton button;
+
+        EpisodePlayControl(String guid, ImageButton button) {
+            this.guid = guid == null ? "" : guid;
+            this.button = button;
+        }
     }
 
     private void showSearch() {
@@ -905,6 +954,15 @@ public final class MainActivity extends Activity {
         TextView title = text("播放列表", 1);
         title.setTextSize(20);
         header.addView(title);
+        ImageButton collapse = iconButton(R.drawable.ic_collapse_queue, "收起列表");
+        collapse.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                queuePopup.dismiss();
+                playerQueue.requestFocus();
+            }
+        });
+        header.addView(collapse);
         ImageButton repeat = iconButton(repeatIcon(), "播放顺序");
         repeat.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -937,10 +995,10 @@ public final class MainActivity extends Activity {
         queuePopup.setBackgroundDrawable(new ColorDrawable(0xff1c2027));
         queuePopup.setOutsideTouchable(true);
         queuePopup.showAsDropDown(miniPlayer, 0, -dp(338));
-        repeat.post(new Runnable() {
+        collapse.post(new Runnable() {
             @Override
             public void run() {
-                repeat.requestFocus();
+                collapse.requestFocus();
             }
         });
     }
@@ -948,6 +1006,18 @@ public final class MainActivity extends Activity {
     private void addQueueRow(LinearLayout root, final int index) {
         LinearLayout row = row();
         row.addView(cover(index < queueArtworks.length ? queueArtworks[index] : "", 42));
+        ImageButton play = iconButton(queuePlayIcon(index), "播放");
+        play.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                if (index == queueIndex) {
+                    queueAction(PlaybackService.ACTION_TOGGLE, index, 0);
+                } else {
+                    queueAction(PlaybackService.ACTION_PLAY_INDEX, index, 0);
+                }
+            }
+        });
+        row.addView(play);
         TextView title = text((index == queueIndex ? "▶ " : "") + queueTitles[index], 1);
         title.setMaxLines(2);
         title.setOnClickListener(new View.OnClickListener() {
@@ -986,6 +1056,13 @@ public final class MainActivity extends Activity {
         });
         row.addView(remove);
         root.addView(row);
+    }
+
+    private int queuePlayIcon(int index) {
+        if (index == queueIndex && currentPlaybackPlaying) {
+            return R.drawable.ic_pause;
+        }
+        return R.drawable.ic_play;
     }
 
     private int repeatIcon() {
@@ -1155,7 +1232,7 @@ public final class MainActivity extends Activity {
     }
 
     private void connectHeaderToFirstEpisode() {
-        Button first = firstContentButton == null ? firstEpisodeButton : firstContentButton;
+        View first = firstContentButton == null ? firstEpisodeButton : firstContentButton;
         if (first == null) {
             return;
         }

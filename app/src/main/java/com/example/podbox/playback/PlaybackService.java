@@ -53,6 +53,7 @@ public final class PlaybackService extends Service implements Player.Listener {
     public static final String EXTRA_SPEED_SUPPORTED = "speed_supported";
     public static final String EXTRA_DURATION = "duration";
     public static final String EXTRA_QUEUE_TITLES = "queue_titles";
+    public static final String EXTRA_QUEUE_GUIDS = "queue_guids";
     public static final String EXTRA_QUEUE_ARTWORKS = "queue_artworks";
     public static final String EXTRA_QUEUE_INDEX = "queue_index";
     public static final String EXTRA_REPEAT_MODE = "repeat_mode";
@@ -319,6 +320,7 @@ public final class PlaybackService extends Service implements Player.Listener {
         Intent state = new Intent(ACTION_STATE);
         state.setPackage(getPackageName());
         state.putExtra(EXTRA_TITLE, currentTitle);
+        state.putExtra(EXTRA_GUID, currentGuid);
         state.putExtra(EXTRA_PLAYING, player.isPlaying());
         state.putExtra(EXTRA_SPEED, player.getPlaybackParameters().speed);
         state.putExtra(EXTRA_SPEED_SUPPORTED, true);
@@ -328,6 +330,7 @@ public final class PlaybackService extends Service implements Player.Listener {
                 duration == C.TIME_UNSET || duration < 0 ? 0 : duration);
         state.putExtra(EXTRA_ARTWORK, currentArtwork());
         state.putExtra(EXTRA_QUEUE_TITLES, queueTitles());
+        state.putExtra(EXTRA_QUEUE_GUIDS, queueGuids());
         state.putExtra(EXTRA_QUEUE_ARTWORKS, queueArtworks());
         state.putExtra(EXTRA_QUEUE_INDEX, player.getCurrentMediaItemIndex());
         state.putExtra(EXTRA_REPEAT_MODE, player.getRepeatMode());
@@ -349,6 +352,14 @@ public final class PlaybackService extends Service implements Player.Listener {
             titles[i] = title == null ? "" : title.toString();
         }
         return titles;
+    }
+
+    private String[] queueGuids() {
+        String[] guids = new String[player.getMediaItemCount()];
+        for (int i = 0; i < guids.length; i++) {
+            guids[i] = player.getMediaItemAt(i).mediaId;
+        }
+        return guids;
     }
 
     private String[] queueArtworks() {
