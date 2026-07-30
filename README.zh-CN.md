@@ -1,8 +1,9 @@
 # PodBox
 
-PodBox 是一款面向低端电视盒子和小屏触屏音响的轻量播客播放器，目标设备包括小米电视盒子、小爱触屏音响，以及 Android 4.1 起的旧安卓设备。
+<a href="https://github.com/w1lli4m666-droid/PodBox/blob/main/README.md">English <img src="https://flagcdn.com/w20/gb.png" alt="United Kingdom flag" width="20"></a> |
+<a href="https://github.com/w1lli4m666-droid/PodBox/blob/main/README.zh-CN.md">简体中文 <img src="https://flagcdn.com/w20/cn.png" alt="China flag" width="20"></a>
 
-默认英文说明见 [README.md](README.md)。
+PodBox 是一款面向低端电视盒子和小屏触屏音响的轻量播客播放器，目标设备包括小米电视盒子、小爱触屏音响，以及 Android 4.1 起的旧安卓设备。
 
 ## 功能
 

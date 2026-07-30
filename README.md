@@ -1,8 +1,9 @@
 # PodBox
 
-PodBox is a lightweight Android podcast player for low-end TV boxes and small touchscreen speakers. It is designed for Xiaomi TV boxes, XiaoAi touchscreen speakers, and older Android devices starting from Android 4.1.
+<a href="https://github.com/w1lli4m666-droid/PodBox/blob/main/README.md">English <img src="https://flagcdn.com/w20/gb.png" alt="United Kingdom flag" width="20"></a> |
+<a href="https://github.com/w1lli4m666-droid/PodBox/blob/main/README.zh-CN.md">简体中文 <img src="https://flagcdn.com/w20/cn.png" alt="China flag" width="20"></a>
 
-[中文说明](README.zh-CN.md)
+PodBox is a lightweight Android podcast player for low-end TV boxes and small touchscreen speakers. It is designed for Xiaomi TV boxes, XiaoAi touchscreen speakers, and older Android devices starting from Android 4.1.
 
 ## Features
 
