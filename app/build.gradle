@@ -10,8 +10,8 @@ android {
         applicationId "com.example.podbox"
         minSdk 16
         targetSdk 28
-        versionCode 3
-        versionName "0.2.1"
+        versionCode 4
+        versionName "0.2.2"
     }
 
     splits {

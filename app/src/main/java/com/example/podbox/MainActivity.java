@@ -106,6 +106,7 @@ public final class MainActivity extends Activity {
     private int repeatMode;
     private String currentPlaybackGuid = "";
     private boolean currentPlaybackPlaying;
+    private boolean lastInputWasTouch;
     private final List<EpisodePlayControl> episodePlayControls = new ArrayList<EpisodePlayControl>();
     private final List<QueueRowControl> queueRowControls = new ArrayList<QueueRowControl>();
 
@@ -1490,7 +1491,14 @@ public final class MainActivity extends Activity {
     }
 
     @Override
+    public boolean dispatchTouchEvent(MotionEvent event) {
+        lastInputWasTouch = true;
+        return super.dispatchTouchEvent(event);
+    }
+
+    @Override
     public boolean dispatchKeyEvent(KeyEvent event) {
+        lastInputWasTouch = false;
         if (event.getAction() == KeyEvent.ACTION_DOWN && miniPlayer.getVisibility() == View.VISIBLE) {
             if (event.getKeyCode() == KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE) {
                 playerToggle.performClick();
@@ -1513,12 +1521,13 @@ public final class MainActivity extends Activity {
         }
         if (subscriptionDetailVisible) {
             showSubscriptions();
-            tabSubscriptions.requestFocus();
+            if (!lastInputWasTouch) {
+                tabSubscriptions.requestFocus();
+            }
             return;
         }
         Button tab = currentTab();
-        if (tab != null && !tab.hasFocus()) {
-            tab.requestFocus();
+        if (!lastInputWasTouch && tab != null && !tab.hasFocus() && tab.requestFocus()) {
             return;
         }
         moveTaskToBack(true);
