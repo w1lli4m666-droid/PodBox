@@ -930,7 +930,7 @@ public final class MainActivity extends Activity {
         button.setTextColor(COLOR_TEXT);
         button.setTextSize(16);
         button.setFocusable(true);
-        button.setFocusableInTouchMode(true);
+        button.setFocusableInTouchMode(false);
         button.setBackgroundResource(R.drawable.focusable_button);
         button.setMinHeight(dp(48));
         button.setMinWidth(dp(72));
@@ -957,7 +957,7 @@ public final class MainActivity extends Activity {
         button.setImageResource(drawable);
         button.setContentDescription(description);
         button.setFocusable(true);
-        button.setFocusableInTouchMode(true);
+        button.setFocusableInTouchMode(false);
         button.setBackgroundResource(R.drawable.focusable_button);
         button.setPadding(dp(6), dp(6), dp(6), dp(6));
         button.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
